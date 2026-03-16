@@ -586,17 +586,22 @@ const CLOUD_READY = !JSONBIN_BIN_ID.startsWith('BU');
 async function loadFromCloud(){
   if(!CLOUD_READY) return false;
   try{
-    const res = await fetch(JSONBIN_URL+'/latest?cb='+Date.now(), {
+    // versioning=false + timestamp → Cloudflare cache'ini kır
+    const url = JSONBIN_URL+'/latest?cb='+Date.now()+'&r='+Math.random().toString(36).slice(2);
+    const res = await fetch(url, {
+      method: 'GET',
       cache: 'no-store',
       headers:{
         'X-Master-Key': JSONBIN_API_KEY,
         'X-Bin-Meta': 'false',
         'X-Bin-Private': 'false',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache'
       }
     });
-    if(!res.ok) return false;
+    if(!res.ok){ console.warn('JSONBin GET hata:', res.status); return false; }
     const saved = await res.json();
+    console.log('JSONBin yüklendi, versiyon:', saved.v || 'eski');
     if(saved.egActuals)       Object.assign(egActuals,       saved.egActuals);
     if(saved.tamActuals)      Object.assign(tamActuals,      saved.tamActuals);
     if(saved.egBolgeActuals)  Object.assign(egBolgeActuals,  saved.egBolgeActuals);
@@ -606,7 +611,11 @@ async function loadFromCloud(){
 }
 
 async function saveActuals(){
-  const payload = {egActuals,tamActuals,egBolgeActuals,tamBolgeActuals};
+  // Sadece sayısal veri — fotoğraflar zaten HTML'de gömülü
+  const payload = {
+    v: Date.now(), // versiyon timestamp — cache kırmak için
+    egActuals, tamActuals, egBolgeActuals, tamBolgeActuals
+  };
   if(CLOUD_READY){
     try{
       const res = await fetch(JSONBIN_URL,{
@@ -614,24 +623,24 @@ async function saveActuals(){
         headers:{
           'Content-Type':'application/json',
           'X-Master-Key':JSONBIN_API_KEY,
-          'X-Bin-Private':'false'
+          'X-Bin-Private':'false',
+          'versioning':'false'
         },
         body:JSON.stringify(payload)
       });
+      const result = await res.json();
+      console.log('JSONBin PUT sonuç:', res.status, JSON.stringify(result).slice(0,100));
       if(res.ok){
-        showToast('☁️ Veriler buluta kaydedildi ✓','success');
+        showToast('☁️ Veriler buluta kaydedildi ✓ (v'+payload.v+')','success');
         return;
       } else {
-        const errText = await res.text();
-        console.error('JSONBin PUT hata:', res.status, errText);
-        showToast('⚠️ Bulut kaydı başarısız ('+res.status+'): '+errText,'error');
+        showToast('⚠️ Bulut kaydı başarısız ('+res.status+')','error');
       }
     }catch(e){
       console.error('Cloud save exception:',e);
       showToast('⚠️ Bulut bağlantı hatası: '+e.message,'error');
     }
   }
-  // Fallback: localStorage
   try{ localStorage.setItem('syhte_v3', JSON.stringify(payload)); }catch(e){}
 }
 
