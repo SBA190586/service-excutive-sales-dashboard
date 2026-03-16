@@ -591,6 +591,7 @@ async function loadFromCloud(){
       headers:{
         'X-Master-Key': JSONBIN_API_KEY,
         'X-Bin-Meta': 'false',
+        'X-Bin-Private': 'false',
         'Cache-Control': 'no-cache'
       }
     });
@@ -610,11 +611,25 @@ async function saveActuals(){
     try{
       const res = await fetch(JSONBIN_URL,{
         method:'PUT',
-        headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_API_KEY},
+        headers:{
+          'Content-Type':'application/json',
+          'X-Master-Key':JSONBIN_API_KEY,
+          'X-Bin-Private':'false'
+        },
         body:JSON.stringify(payload)
       });
-      if(res.ok) return;
-    }catch(e){ console.warn('Cloud save failed:',e); }
+      if(res.ok){
+        showToast('☁️ Veriler buluta kaydedildi ✓','success');
+        return;
+      } else {
+        const errText = await res.text();
+        console.error('JSONBin PUT hata:', res.status, errText);
+        showToast('⚠️ Bulut kaydı başarısız ('+res.status+'): '+errText,'error');
+      }
+    }catch(e){
+      console.error('Cloud save exception:',e);
+      showToast('⚠️ Bulut bağlantı hatası: '+e.message,'error');
+    }
   }
   // Fallback: localStorage
   try{ localStorage.setItem('syhte_v3', JSON.stringify(payload)); }catch(e){}
