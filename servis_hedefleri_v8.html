@@ -631,17 +631,17 @@ async function saveActuals(){
       const result = await res.json();
       console.log('JSONBin PUT sonuç:', res.status, JSON.stringify(result).slice(0,100));
       if(res.ok){
-        showToast('☁️ Veriler buluta kaydedildi ✓ (v'+payload.v+')','success');
+        showToast('☁️ Veriler buluta kaydedildi ✓','success');
         return;
       } else {
-        showToast('⚠️ Bulut kaydı başarısız ('+res.status+')','error');
+        showToast('⚠️ Bulut kaydı başarısız ('+res.status+') — tekrar deneyin','error');
       }
     }catch(e){
       console.error('Cloud save exception:',e);
       showToast('⚠️ Bulut bağlantı hatası: '+e.message,'error');
     }
   }
-  try{ localStorage.setItem('syhte_v3', JSON.stringify(payload)); }catch(e){}
+  // localStorage KULLANILMIYOR — başka cihazlara yanlış veri göstermemek için
 }
 
 function initActuals(){
@@ -654,23 +654,15 @@ function initActuals(){
     egBolgeActuals[b]  = {...(BASE_DATA.bolge_data[b].eg_actuals||{})};
     tamBolgeActuals[b] = {...(BASE_DATA.bolge_data[b].tam_actuals||{})};
   });
-  // 2. Cloud verisini async yükle, gelince UI'ı güncelle
+  // 2. SADECE cloud'dan yükle — localStorage kullanılmıyor
+  //    localStorage eski veri bırakıp diğer cihazlara yanlış veri gösterdiği için devre dışı
   loadFromCloud().then(ok => {
     const badge = document.getElementById('cloudStatus');
     if(badge) badge.className = 'cloud-badge' + (ok ? ' connected' : '');
-    if(ok){ render(); return; }
-    // Fallback: localStorage
-    try{
-      const ls = localStorage.getItem('syhte_v3');
-      if(ls){
-        const s = JSON.parse(ls);
-        if(s.egActuals)       Object.assign(egActuals,       s.egActuals);
-        if(s.tamActuals)      Object.assign(tamActuals,      s.tamActuals);
-        if(s.egBolgeActuals)  Object.assign(egBolgeActuals,  s.egBolgeActuals);
-        if(s.tamBolgeActuals) Object.assign(tamBolgeActuals, s.tamBolgeActuals);
-        render();
-      }
-    }catch(e){}
+    // Cloud başarılı ya da başarısız, her durumda render et
+    // (başarısız olursa base data gösterilir, localStorage'a bakılmaz)
+    render();
+    if(!ok) console.warn('Cloud yüklenemedi, base data gösteriliyor');
   });
 }
 
