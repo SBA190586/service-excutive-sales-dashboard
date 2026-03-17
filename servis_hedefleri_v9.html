@@ -1376,7 +1376,7 @@ function exportTableExcel(){
   const wb = XLSX.utils.book_new();
   const wkLabel = wk==='all'?'Yıllık':('Hafta_'+wk);
   XLSX.utils.book_append_sheet(wb, ws, 'Performans_'+wkLabel);
-  XLSX.writeFile(wb, `Servis_Performans_${wkLabel}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
+  XLSX.writeFile(wb, 'Servis_Performans_'+wkLabel+'_'+new Date().toLocaleDateString('tr-TR').split('.').join('-')+'.xlsx');
   showToast('Excel dosyası indirildi ✓','success');
 }
 
@@ -1406,7 +1406,7 @@ function exportTrendExcel(){
   ws['!cols'] = [12,16,16,16,16].map(w=>({wch:w}));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Haftalık_Trend');
-  XLSX.writeFile(wb, `Haftalık_Trend_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
+  XLSX.writeFile(wb, 'Haftalık_Trend_'+new Date().toLocaleDateString('tr-TR').split('.').join('-')+'.xlsx');
   showToast('Trend Excel indirildi ✓','success');
 }
 
