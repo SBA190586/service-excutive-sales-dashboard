@@ -164,8 +164,9 @@ img{display:block;}
 .radial-card{background:var(--surface);border-radius:var(--r);padding:18px 20px;
   box-shadow:var(--sh);border:1px solid var(--border);}
 .rc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:16px;}
-.rc-title{font-size:13px;font-weight:800;line-height:1.3;}
-.rc-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+.rc-title{font-size:13px;font-weight:800;line-height:1.3;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.rc-sub{display:none;} /* isim artık badge olarak gösteriliyor */
+.rc-name-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;background:rgba(37,99,235,.1);color:#1d4ed8;font-size:11px;font-weight:700;border:1px solid rgba(37,99,235,.25);white-space:nowrap;}
 .rc-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 .rc-body{display:flex;align-items:center;gap:16px;}
 
@@ -421,7 +422,7 @@ img{display:block;}
   <div class="radial-row">
     <div class="radial-card">
       <div class="rc-head">
-        <div><div class="rc-title">🛡️ Ek Garanti — Yıllık OKR Hedefi</div><div class="rc-sub">2026 Gerçekleşme</div></div>
+        <div><div class="rc-title">🛡️ Ek Garanti — Yıllık OKR Hedefi <span class="rc-name-badge" id="egRSub">Türkiye</span></div></div>
         <div class="rc-badge chip-b" id="egHWBadge">—</div>
       </div>
       <div class="rc-body">
@@ -441,7 +442,7 @@ img{display:block;}
     </div>
     <div class="radial-card">
       <div class="rc-head">
-        <div><div class="rc-title">⭐ Tamamlayıcı Ürün — Yıllık OKR Hedefi</div><div class="rc-sub">2026 Gerçekleşme</div></div>
+        <div><div class="rc-title">⭐ Tamamlayıcı Ürün — Yıllık OKR Hedefi <span class="rc-name-badge" id="tamRSub">Türkiye</span></div></div>
         <div class="rc-badge" style="background:var(--green-l);color:var(--green)" id="tamHWBadge">—</div>
       </div>
       <div class="rc-body">
@@ -671,6 +672,8 @@ function initActuals(){
       const badge = document.getElementById('cloudStatus');
       if(badge) badge.className = 'cloud-badge' + (ok ? ' connected' : '');
       if(!ok) console.warn('Cloud yüklenemedi, base data gösteriliyor');
+      // Cloud yüklendi — hafta seçimini güncelle (son veri haftasını işaretle)
+      populateSelects();
       render(); // HER DURUMDA — cloud sonrası tek render
     })
     .catch(() => {
@@ -751,7 +754,15 @@ function populateSelects(){
 
   const ws = document.getElementById('weekSel');
   ws.innerHTML = '<option value="latest">Son Hafta</option><option value="all">Yıllık Kümülatif</option>';
-  WEEKS.forEach(w=>{ const o=document.createElement('option');o.value=w.hafta;o.textContent=`Hafta ${w.hafta} (${w.baslangic}–${w.bitis})`;ws.appendChild(o); });
+  const lastDataWk = getLastWeekWithData();
+  WEEKS.forEach(w=>{
+    const o = document.createElement('option');
+    o.value = w.hafta;
+    const isLast = (w.hafta === lastDataWk);
+    o.textContent = (isLast ? '★ ' : '') + 'Hafta '+w.hafta+' ('+w.baslangic+'–'+w.bitis+')' + (isLast ? ' ← Son Veri' : '');
+    if(isLast){ o.style.fontWeight='700'; o.style.color='#2563eb'; }
+    ws.appendChild(o);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1052,10 +1063,22 @@ function renderRadials(mode, selMgr, selBolge, wk){
   const egHP=pct(d.egHR,d.egHT), tamHP=pct(d.tamHR,d.tamHT);
   const egYP=pct(d.egYR,d.egYT), tamYP=pct(d.tamYR,d.tamYT);
   
-  document.getElementById('egYPct').textContent=`%${egYP}`;
-  document.getElementById('tamYPct').textContent=`%${tamYP}`;
-  document.getElementById('egHWBadge').textContent=`Haftalık %${egHP}`;
-  document.getElementById('tamHWBadge').textContent=`Haftalık %${tamHP}`;
+  document.getElementById('egYPct').textContent='%'+egYP;
+  document.getElementById('tamYPct').textContent='%'+tamYP;
+  document.getElementById('egHWBadge').textContent='Haftalık %'+egHP;
+  document.getElementById('tamHWBadge').textContent='Haftalık %'+tamHP;
+  // Subtitle: seçili yönetmen/bölge adı veya Türkiye
+  const subLabel = (()=>{
+    if(mode==='manager'){
+      return selMgr==='all' ? 'Türkiye' : selMgr;
+    } else {
+      return selBolge==='all' ? 'Türkiye' : selBolge.replace(' BY','');
+    }
+  })();
+  const egSubEl = document.getElementById('egRSub');
+  const tamSubEl = document.getElementById('tamRSub');
+  if(egSubEl) egSubEl.textContent = subLabel;
+  if(tamSubEl) tamSubEl.textContent = subLabel;
   
   drawSVGGauge('egGaugeFill', egYP);
   drawSVGGauge('tamGaugeFill', tamYP);
