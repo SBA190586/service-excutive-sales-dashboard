@@ -212,6 +212,9 @@ img{display:block;}
   box-shadow:var(--sh);border:1px solid var(--border);margin-bottom:var(--gap);}
 .tc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .tc-title{font-size:13px;font-weight:800;}
+.export-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s;}
+.export-btn:hover{background:#15803d;}
+.export-btn svg{width:14px;height:14px;flex-shrink:0;}
 .tc-sub{font-size:10px;color:var(--text2);margin-top:2px;}
 .tbl{width:100%;border-collapse:collapse;}
 .tbl th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
@@ -463,6 +466,10 @@ img{display:block;}
     <div class="chart-card">
       <div class="cc-head">
         <div><div class="cc-title">Haftalık Performans Trendi</div><div class="cc-sub">Hedef vs Gerçekleşen</div></div>
+        <button class="export-btn" onclick="exportTrendExcel()" style="margin-left:auto;margin-right:8px;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+          Excel
+        </button>
         <div class="cc-legend">
           <div class="leg"><div class="leg-dot" style="background:#2563eb"></div><span style="color:#1d4ed8;font-weight:700">EG</span>&nbsp;Gerç.</div>
           <div class="leg"><div class="leg-dash" style="border-color:#2563eb;border-top-width:2px;opacity:.8"></div>EG Hedef</div>
@@ -483,6 +490,10 @@ img{display:block;}
     <div class="tc-head">
       <div><div class="tc-title" id="tableTitle">Performans Tablosu</div>
         <div class="tc-sub">EG & Tamamlayıcı — Haftalık ve Yıllık</div></div>
+      <button class="export-btn" onclick="exportTableExcel()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+        Excel'e Aktar
+      </button>
     </div>
     <div class="tbl-scroll">
       <table class="tbl">
@@ -1298,6 +1309,106 @@ function updateClock(){
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  EXCEL EXPORT
+// ═══════════════════════════════════════════════════════════
+function exportTableExcel(){
+  const mode    = document.getElementById('viewSel').value;
+  const selMgr  = document.getElementById('mgrSel').value;
+  const selBolge= document.getElementById('bolgeSel').value;
+  const wk      = getSelectedWeek();
+  const upToWk  = (wk && wk!=='all') ? wk : null;
+  const isAllWk = wk === 'all';
+
+  // Build rows
+  let rows = [];
+  const header = ['İsim','EG Hft.Hedef','EG Hft.Gerç.','EG Hft.%','EG Yıl.Hedef','EG Yıl.Gerç.','EG Yıl.%','TAM Hft.Hedef','TAM Hft.Gerç.','TAM Hft.%','TAM Yıl.Hedef','TAM Yıl.Gerç.','TAM Yıl.%','Toplam Gerç.','Toplam Hedef','Toplam %'];
+  rows.push(header);
+
+  const fmtN = v => (!v||isNaN(v)) ? 0 : Math.round(v);
+
+  if(mode==='manager'){
+    const mgrs = selMgr==='all' ? MANAGERS : MANAGERS.filter(m=>m.isim===selMgr);
+    mgrs.forEach(m=>{
+      const egH  = wk&&!isAllWk ? getMgrEGActual(m.isim,wk)  : 0;
+      const tamH = wk&&!isAllWk ? getMgrTAMActual(m.isim,wk) : 0;
+      const egY  = getMgrEGCumul(m.isim,  upToWk);
+      const tamY = getMgrTAMCumul(m.isim, upToWk);
+      rows.push([
+        m.isim,
+        fmtN(m.eg_haftalik),  fmtN(egH),  pct(egH,m.eg_haftalik),
+        fmtN(m.eg_yillik),    fmtN(egY),  pct(egY,m.eg_yillik),
+        fmtN(m.tam_haftalik), fmtN(tamH), pct(tamH,m.tam_haftalik),
+        fmtN(m.tam_yillik),   fmtN(tamY), pct(tamY,m.tam_yillik),
+        fmtN(egY+tamY), fmtN((m.eg_yillik||0)+(m.tam_yillik||0)),
+        pct(egY+tamY,(m.eg_yillik||0)+(m.tam_yillik||0))
+      ]);
+    });
+  } else {
+    const bolges = selBolge==='all' ? BOLGE_LIST : [selBolge];
+    bolges.forEach(b=>{
+      const bd   = BOLGE_DATA[b]||{};
+      const egH  = wk&&!isAllWk ? getBolgeEGActual(b,wk)  : 0;
+      const tamH = wk&&!isAllWk ? getBolgeTAMActual(b,wk) : 0;
+      const egY  = getBolgeEGCumul(b,  upToWk);
+      const tamY = getBolgeTAMCumul(b, upToWk);
+      rows.push([
+        b,
+        fmtN(bd.eg_haftalik),  fmtN(egH),  pct(egH,bd.eg_haftalik),
+        fmtN(bd.eg_yillik),    fmtN(egY),  pct(egY,bd.eg_yillik),
+        fmtN(bd.tam_haftalik), fmtN(tamH), pct(tamH,bd.tam_haftalik),
+        fmtN(bd.tam_yillik),   fmtN(tamY), pct(tamY,bd.tam_yillik),
+        fmtN(egY+tamY), fmtN((bd.eg_yillik||0)+(bd.tam_yillik||0)),
+        pct(egY+tamY,(bd.eg_yillik||0)+(bd.tam_yillik||0))
+      ]);
+    });
+  }
+
+  // Sort same as table
+  const hdr = rows.shift();
+  rows.sort((a,b)=> _tblSort.dir * (a[15]-b[15]));
+  rows.unshift(hdr);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Column widths
+  ws['!cols'] = [20,14,14,10,14,14,10,14,14,10,14,14,10,14,14,10].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  const wkLabel = wk==='all'?'Yıllık':('Hafta_'+wk);
+  XLSX.utils.book_append_sheet(wb, ws, 'Performans_'+wkLabel);
+  XLSX.writeFile(wb, `Servis_Performans_${wkLabel}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
+  showToast('Excel dosyası indirildi ✓','success');
+}
+
+function exportTrendExcel(){
+  const mode    = document.getElementById('viewSel').value;
+  const selMgr  = document.getElementById('mgrSel').value;
+  const selBolge= document.getElementById('bolgeSel').value;
+  const maxWk   = getLastWeekWithData() || 9;
+  const fmtN    = v => (!v||isNaN(v)) ? 0 : Math.round(v);
+
+  const header = ['Hafta','EG Gerçekleşen','EG Hedef','TAM Gerçekleşen','TAM Hedef'];
+  const rows   = [header];
+
+  for(let w=1; w<=maxWk; w++){
+    let ea=0,ta=0,et=0,tt=0;
+    if(mode==='manager'){
+      const mgrs = selMgr==='all'?MANAGERS:MANAGERS.filter(m=>m.isim===selMgr);
+      mgrs.forEach(m=>{ea+=getMgrEGActual(m.isim,w);ta+=getMgrTAMActual(m.isim,w);et+=m.eg_haftalik||0;tt+=m.tam_haftalik||0;});
+    } else {
+      const bl = selBolge==='all'?BOLGE_LIST:[selBolge];
+      bl.forEach(b=>{const bd=BOLGE_DATA[b]||{};ea+=getBolgeEGActual(b,w);ta+=getBolgeTAMActual(b,w);et+=bd.eg_haftalik||0;tt+=bd.tam_haftalik||0;});
+    }
+    rows.push(['Hafta '+w, fmtN(ea), fmtN(et), fmtN(ta), fmtN(tt)]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [12,16,16,16,16].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Haftalık_Trend');
+  XLSX.writeFile(wb, `Haftalık_Trend_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
+  showToast('Trend Excel'i indirildi ✓','success');
+}
+
 initActuals();
 populateSelects();
 updateClock();
