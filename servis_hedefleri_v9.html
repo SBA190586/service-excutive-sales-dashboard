@@ -665,16 +665,17 @@ function initActuals(){
     egBolgeActuals[b]  = {...(BASE_DATA.bolge_data[b].eg_actuals||{})};
     tamBolgeActuals[b] = {...(BASE_DATA.bolge_data[b].tam_actuals||{})};
   });
-  // 2. SADECE cloud'dan yükle — localStorage kullanılmıyor
-  //    localStorage eski veri bırakıp diğer cihazlara yanlış veri gösterdiği için devre dışı
-  loadFromCloud().then(ok => {
-    const badge = document.getElementById('cloudStatus');
-    if(badge) badge.className = 'cloud-badge' + (ok ? ' connected' : '');
-    // Cloud başarılı ya da başarısız, her durumda render et
-    // (başarısız olursa base data gösterilir, localStorage'a bakılmaz)
-    render();
-    if(!ok) console.warn('Cloud yüklenemedi, base data gösteriliyor');
-  });
+  // 2. Cloud'dan yükle — tamamlanınca render et
+  loadFromCloud()
+    .then(ok => {
+      const badge = document.getElementById('cloudStatus');
+      if(badge) badge.className = 'cloud-badge' + (ok ? ' connected' : '');
+      if(!ok) console.warn('Cloud yüklenemedi, base data gösteriliyor');
+      render(); // HER DURUMDA — cloud sonrası tek render
+    })
+    .catch(() => {
+      render(); // Hata olsa bile göster
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1406,14 +1407,14 @@ function exportTrendExcel(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Haftalık_Trend');
   XLSX.writeFile(wb, `Haftalık_Trend_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
-  showToast('Trend Excel'i indirildi ✓','success');
+  showToast('Trend Excel indirildi ✓','success');
 }
 
-initActuals();
 populateSelects();
 updateClock();
 setInterval(updateClock,1000);
-render();
+// render() cloud'dan sonra çağrılıyor — initActuals() içinde
+initActuals();
 setInterval(render,60000);
 
 // Rebuild charts on resize (debounced)
