@@ -1245,7 +1245,7 @@ function renderWeekly(mode, selMgr, selBolge){
   }
   const allVals=[...egA,...tamA,...egT,...tamT].filter(v=>v>0);
   const maxVal=allVals.length?Math.max(...allVals):1;
-  const W=600,H=200,PL=58,PR=12,PT=12,PB=28;
+  const W=600,H=220,PL=58,PR=12,PT=12,PB=40;
   const cW=W-PL-PR,cH=H-PT-PB,n=maxWk;
   const xP=i=>PL+(i/(n-1||1))*cW;
   const yP=v=>PT+cH-(v/maxVal)*cH;
@@ -1254,14 +1254,14 @@ function renderWeekly(mode, selMgr, selBolge){
   for(let i=0;i<=4;i++){
     const v=(maxVal/4)*i,y=yP(v);
     s+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/>`;
-    s+=`<text x="${PL-5}" y="${y+3.5}" text-anchor="end" font-size="11" fill="#94a3b8" font-family="Inter,sans-serif">${fmtK(v)}</text>`;
+    s+=`<text x="${PL-5}" y="${y+3.5}" text-anchor="end" font-size="13" fill="#64748b" font-weight="600" font-family="Inter,sans-serif">${fmtK(v)}</text>`;
   }
   for(let i=0;i<n;i++){
     const isLastWk = (i+1 === getLastWeekWithData());
     const xLbl = isLastWk ? '★H'+(i+1) : 'H'+(i+1);
-    const xFill = isLastWk ? '#2563eb' : '#94a3b8';
-    const xWeight = isLastWk ? '700' : '400';
-    const xSize = isLastWk ? '10' : '9';
+    const xFill = isLastWk ? '#2563eb' : '#475569';
+    const xWeight = isLastWk ? '900' : '700';
+    const xSize = isLastWk ? '16' : '14';
     s+=`<text x="${xP(i)}" y="${H-5}" text-anchor="middle" font-size="${xSize}" fill="${xFill}" font-weight="${xWeight}" font-family="Inter,sans-serif">${xLbl}</text>`;
   }
   // path helpers
