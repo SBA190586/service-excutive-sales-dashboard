@@ -509,7 +509,7 @@ img{display:block;}
       <div class="svg-chart-wrap" id="weeklyChartWrap"></div>
     </div>
     <div class="chart-card">
-      <div class="cc-head"><div><div class="cc-title">Bölge Karşılaştırması <span class="rc-name-badge" id="bolgeWkBadge" style="background:rgba(234,179,8,.12);color:#92400e;border-color:rgba(234,179,8,.35);">—</span></div><div class="cc-sub">Haftalık gerçekleşme %</div></div></div>
+      <div class="cc-head"><div><div class="cc-title">Bölge Karşılaştırması <span class="rc-name-badge" id="bolgeWkBadge" style="background:rgba(234,179,8,.12);color:#92400e;border-color:rgba(234,179,8,.35);">—</span></div><div class="cc-sub" id="bolgeSub">Haftalık gerçekleşme %</div></div></div>
       <div class="svg-chart-wrap" id="bolgeChartWrap"></div>
     </div>
   </div>
@@ -945,13 +945,15 @@ function render(){
   const selMgr = document.getElementById('mgrSel').value;
   const selBolge = document.getElementById('bolgeSel').value;
   const wk = getSelectedWeek();
-  
-  renderProfile(mode, selMgr, selBolge, wk);
-  renderChampions(wk);
-  renderKPI(mode, selMgr, selBolge, wk);
-  renderRadials(mode, selMgr, selBolge, wk);
+  // Bölge grafiği için: 'all' seçiliyse yıllık kümülatif, değilse seçili hafta
+  const bolgeWk = wk; // renderBolgeBar kendi içinde 'all' kontrolü yapıyor
+
+  renderProfile(mode, selMgr, selBolge, wk==='all' ? getLastWeekWithData() : wk);
+  renderChampions(wk==='all' ? getLastWeekWithData() : wk);
+  renderKPI(mode, selMgr, selBolge, wk==='all' ? getLastWeekWithData() : wk);
+  renderRadials(mode, selMgr, selBolge, wk==='all' ? getLastWeekWithData() : wk);
   renderWeekly(mode, selMgr, selBolge);
-  renderBolgeBar(wk);
+  renderBolgeBar(bolgeWk);
   renderTable(mode, selMgr, selBolge, wk);
 }
 
@@ -1297,27 +1299,43 @@ function renderWeekly(mode, selMgr, selBolge){
 function renderBolgeBar(wk){
   const container=document.getElementById('bolgeChartWrap');
   if(!container)return;
-  // Badge: seçili hafta bilgisini göster
+  // Badge ve subtitle güncelle
   const badge = document.getElementById('bolgeWkBadge');
+  const bolgeSub = document.getElementById('bolgeSub');
+  const isYillikBadge = (!wk || wk==='all');
   if(badge){
     const lastWk = getLastWeekWithData();
-    if(wk && wk!=='all'){
+    if(!isYillikBadge){
       const wi = WEEKS.find(w=>w.hafta===wk);
       const isLast = (wk===lastWk);
       badge.textContent = (isLast?'★ ':'')+'Hafta '+wk+(wi?' ('+wi.baslangic+'–'+wi.bitis+')':'');
       badge.style.fontWeight = isLast ? '700' : '600';
     } else {
-      badge.textContent = 'Tüm Haftalar';
+      badge.textContent = '★ Yıllık Kümülatif';
+      badge.style.fontWeight = '700';
     }
   }
+  if(bolgeSub){
+    bolgeSub.textContent = isYillikBadge ? 'Yıllık gerçekleşme %' : 'Haftalık gerçekleşme %';
+  }
   const egR=[],tamR=[],lbls=[];
+  const isYillik = (!wk || wk==='all');
   BOLGE_LIST.forEach(b=>{
     const bd=BOLGE_DATA[b]||{};
-    const ea=wk&&wk!=='all'?getBolgeEGActual(b,wk):0;
-    const ta=wk&&wk!=='all'?getBolgeTAMActual(b,wk):0;
+    let ea, ta;
+    if(isYillik){
+      // Yıllık kümülatif mod
+      ea = getBolgeEGCumul(b, null);
+      ta = getBolgeTAMCumul(b, null);
+      egR.push(pct(ea, bd.eg_yillik));
+      tamR.push(pct(ta, bd.tam_yillik));
+    } else {
+      ea = getBolgeEGActual(b, wk);
+      ta = getBolgeTAMActual(b, wk);
+      egR.push(pct(ea, bd.eg_haftalik));
+      tamR.push(pct(ta, bd.tam_haftalik));
+    }
     lbls.push(b.replace(' BY','').replace('İstanbul ANADOLU','İst.Anadolu').replace('İstanbul AVRUPA','İst.Avrupa'));
-    egR.push(pct(ea,bd.eg_haftalik));
-    tamR.push(pct(ta,bd.tam_haftalik));
   });
   const maxR=Math.max(...egR,...tamR,10);
   const yMax=Math.min(Math.ceil((maxR+15)/20)*20,200);
